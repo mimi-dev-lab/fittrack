@@ -7,7 +7,7 @@ const navItems = [
   { to: '/meals', icon: Utensils, label: '饮食' },
   { to: '/workout', icon: Dumbbell, label: '运动' },
   { to: '/stats', icon: BarChart3, label: '统计' },
-  { to: '/coach', icon: Bot, label: 'AI教练' },
+  { to: '/chat', icon: Bot, label: 'Mimi' },
 ];
 
 export default function Layout() {

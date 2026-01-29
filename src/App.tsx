@@ -5,7 +5,7 @@ import WeightPage from './pages/WeightPage';
 import MealsPage from './pages/MealsPage';
 import WorkoutPage from './pages/WorkoutPage';
 import StatsPage from './pages/StatsPage';
-import CoachPage from './pages/CoachPage';
+import ChatPage from './pages/ChatPage';
 
 function App() {
   return (
@@ -17,7 +17,7 @@ function App() {
           <Route path="meals" element={<MealsPage />} />
           <Route path="workout" element={<WorkoutPage />} />
           <Route path="stats" element={<StatsPage />} />
-          <Route path="coach" element={<CoachPage />} />
+          <Route path="chat" element={<ChatPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
