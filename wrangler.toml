@@ -1,0 +1,8 @@
+name = "fittrack"
+pages_build_output_dir = "./dist"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fittrack-db"
+database_id = "d0cad56a-c229-434d-92c6-522c27660746"
