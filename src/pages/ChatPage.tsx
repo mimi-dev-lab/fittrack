@@ -309,15 +309,23 @@ export default function ChatPage() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto bg-white rounded-2xl shadow-sm p-4 space-y-4">
         {messages.length === 0 && (
-          <div className="text-center text-gray-400 py-12">
-            <Bot className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p>你好！我是 Mimi 🐱</p>
-            <p className="text-sm mt-2">告诉我你的体重、饮食、运动，我来帮你记录！</p>
-            <div className="mt-4 text-sm text-gray-500">
-              <p>试试说：</p>
-              <p className="mt-1">"今天体重 75kg"</p>
-              <p>"午饭吃了沙拉"</p>
-              <p>"跑了 3 公里"</p>
+          <div className="text-center py-12 animate-fade-in">
+            <div className="w-20 h-20 mx-auto mb-6 bg-purple-100 rounded-full flex items-center justify-center">
+              <Bot className="w-10 h-10 text-purple-500" />
+            </div>
+            <p className="text-lg font-medium text-gray-700">你好！我是 Mimi 🐱</p>
+            <p className="text-gray-500 mt-2">告诉我你的体重、饮食、运动</p>
+            <p className="text-gray-500">我来帮你记录！</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {['"今天体重 75kg"', '"午饭吃了沙拉"', '"跑了 3 公里"'].map((text) => (
+                <button
+                  key={text}
+                  onClick={() => setInput(text.slice(1, -1))}
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-600 transition-colors"
+                >
+                  {text}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -369,12 +377,12 @@ export default function ChatPage() {
           onKeyPress={handleKeyPress}
           placeholder="输入消息..."
           disabled={!isConnected}
-          className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100"
+          className="flex-1 px-4 py-3.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 text-base"
         />
         <button
           onClick={sendMessage}
           disabled={!input.trim() || !isConnected || isLoading}
-          className="px-4 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="px-5 py-3.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all active:scale-95"
         >
           <Send className="w-5 h-5" />
         </button>

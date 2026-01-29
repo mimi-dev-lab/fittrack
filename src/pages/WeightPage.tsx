@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Plus, Trash2 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { Plus, Trash2, Scale } from 'lucide-react';
 import { weightsApi, userApi, getLocalISOString, type Weight, type User } from '../api/client';
+import { useToast } from '../components/Toast';
+import EmptyState from '../components/EmptyState';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function WeightPage() {
   const [records, setRecords] = useState<Weight[]>([]);
@@ -9,6 +12,9 @@ export default function WeightPage() {
   const [showInput, setShowInput] = useState(false);
   const [inputWeight, setInputWeight] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const { showToast } = useToast();
 
   const loadData = async () => {
     try {
@@ -20,6 +26,7 @@ export default function WeightPage() {
       setUser(userData);
     } catch (err) {
       console.error('Failed to load data:', err);
+      showToast('error', '加载失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -37,8 +44,12 @@ export default function WeightPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const weight = parseFloat(inputWeight);
-    if (isNaN(weight) || weight <= 0) return;
+    if (isNaN(weight) || weight <= 0) {
+      showToast('error', '请输入有效的体重');
+      return;
+    }
 
+    setSaving(true);
     try {
       await weightsApi.create({
         weight_kg: weight,
@@ -48,20 +59,26 @@ export default function WeightPage() {
       });
       setInputWeight('');
       setShowInput(false);
+      showToast('success', '体重已记录 ⚖️');
       loadData();
     } catch (err) {
       console.error('Failed to save weight:', err);
+      showToast('error', '保存失败，请重试');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确定删除这条记录？')) return;
     try {
       await weightsApi.delete(id);
+      showToast('success', '已删除');
       loadData();
     } catch (err) {
       console.error('Failed to delete:', err);
+      showToast('error', '删除失败');
     }
+    setDeleteConfirm(null);
   };
 
   const targetWeight = user?.target_weight_kg || 70;
@@ -115,7 +132,7 @@ export default function WeightPage() {
       </div>
 
       {/* 图表 */}
-      {chartData.length > 0 && (
+      {chartData.length > 0 ? (
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">体重趋势</h2>
           <div className="h-64">
@@ -124,29 +141,52 @@ export default function WeightPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="date" stroke="#888" fontSize={12} />
                 <YAxis domain={['auto', 'auto']} stroke="#888" fontSize={12} />
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ 
+                    borderRadius: '8px', 
+                    border: 'none', 
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' 
+                  }}
+                  formatter={(value) => [`${value} kg`, '体重']}
+                />
+                <ReferenceLine 
+                  y={targetWeight} 
+                  stroke="#22c55e" 
+                  strokeDasharray="5 5" 
+                  label={{ value: '目标', fill: '#22c55e', fontSize: 12 }}
+                />
                 <Line
                   type="monotone"
                   dataKey="weight"
                   stroke="#22c55e"
                   strokeWidth={2}
-                  dot={{ fill: '#22c55e', strokeWidth: 2 }}
+                  dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
+      ) : (
+        <EmptyState
+          icon={Scale}
+          iconColor="text-primary-500"
+          title="开始追踪体重"
+          description="记录体重，查看变化趋势"
+          action={{
+            label: '记录体重',
+            onClick: () => setShowInput(true),
+          }}
+        />
       )}
 
       {/* 记录列表 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">历史记录</h2>
-        {records.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">暂无记录，点击下方按钮添加</p>
-        ) : (
+      {records.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">历史记录</h2>
           <div className="space-y-2">
             {records.slice(0, 10).map((record) => (
-              <div key={record.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+              <div key={record.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 animate-fade-in">
                 <span className="text-gray-600">{record.recorded_at.slice(0, 10)}</span>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
@@ -156,8 +196,8 @@ export default function WeightPage() {
                     </span>
                   </div>
                   <button
-                    onClick={() => handleDelete(record.id)}
-                    className="p-1 text-gray-400 hover:text-red-500"
+                    onClick={() => setDeleteConfirm(record.id)}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -165,13 +205,23 @@ export default function WeightPage() {
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* 删除确认 */}
+      <ConfirmDialog
+        isOpen={deleteConfirm !== null}
+        title="删除记录"
+        message="确定要删除这条体重记录吗？"
+        confirmText="删除"
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        onCancel={() => setDeleteConfirm(null)}
+      />
 
       {/* 输入弹窗 */}
       {showInput && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-scale-in">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">记录今日体重</h3>
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
@@ -182,7 +232,7 @@ export default function WeightPage() {
                   value={inputWeight}
                   onChange={(e) => setInputWeight(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="例如: 75.5"
+                  placeholder={latestWeight ? `上次: ${latestWeight}` : "例如: 75.5"}
                   autoFocus
                 />
               </div>
@@ -190,15 +240,17 @@ export default function WeightPage() {
                 <button
                   type="button"
                   onClick={() => setShowInput(false)}
-                  className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors"
+                  disabled={saving}
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600"
+                  disabled={saving}
+                  className="flex-1 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:bg-gray-300 transition-colors"
                 >
-                  保存
+                  {saving ? '保存中...' : '保存'}
                 </button>
               </div>
             </form>
@@ -209,7 +261,7 @@ export default function WeightPage() {
       {/* 添加按钮 */}
       <button
         onClick={() => setShowInput(true)}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-primary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-600 transition-colors"
+        className="fixed bottom-24 right-4 w-14 h-14 bg-primary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-600 active:scale-95 transition-all"
       >
         <Plus className="w-6 h-6" />
       </button>

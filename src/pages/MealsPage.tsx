@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Coffee, Sun, Moon, Cookie } from 'lucide-react';
+import { Plus, Trash2, Coffee, Sun, Moon, Cookie, Utensils } from 'lucide-react';
 import { mealsApi, getLocalDateString, getLocalISOString, type Meal } from '../api/client';
+import { useToast } from '../components/Toast';
+import EmptyState from '../components/EmptyState';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const mealTypeConfig = {
   breakfast: { label: '早餐', icon: Coffee, color: 'text-yellow-500', bg: 'bg-yellow-100' },
@@ -9,11 +12,24 @@ const mealTypeConfig = {
   snack: { label: '零食', icon: Cookie, color: 'text-pink-500', bg: 'bg-pink-100' },
 };
 
+// 常见食物快速选择
+const quickFoods = [
+  { name: '米饭', calories: 116, meal_type: 'lunch' as const },
+  { name: '鸡胸肉', calories: 165, protein_g: 31, meal_type: 'lunch' as const },
+  { name: '鸡蛋', calories: 78, protein_g: 6, meal_type: 'breakfast' as const },
+  { name: '牛奶', calories: 42, protein_g: 3.4, meal_type: 'breakfast' as const },
+  { name: '苹果', calories: 52, carbs_g: 14, meal_type: 'snack' as const },
+  { name: '香蕉', calories: 89, carbs_g: 23, meal_type: 'snack' as const },
+];
+
 export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [showInput, setShowInput] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const { showToast } = useToast();
 
   // 表单状态
   const [formData, setFormData] = useState({
@@ -31,6 +47,7 @@ export default function MealsPage() {
       setMeals(data);
     } catch (err) {
       console.error('Failed to load meals:', err);
+      showToast('error', '加载失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -42,8 +59,12 @@ export default function MealsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.description.trim()) return;
+    if (!formData.description.trim()) {
+      showToast('error', '请输入食物名称');
+      return;
+    }
 
+    setSaving(true);
     try {
       await mealsApi.create({
         meal_type: formData.meal_type,
@@ -64,20 +85,37 @@ export default function MealsPage() {
         fat_g: '',
       });
       setShowInput(false);
+      showToast('success', '已记录 🍽️');
       loadMeals();
     } catch (err) {
       console.error('Failed to save meal:', err);
+      showToast('error', '保存失败，请重试');
+    } finally {
+      setSaving(false);
     }
   };
 
+  const handleQuickAdd = (food: typeof quickFoods[0]) => {
+    setFormData({
+      meal_type: food.meal_type,
+      description: food.name,
+      calories: food.calories.toString(),
+      protein_g: food.protein_g?.toString() || '',
+      carbs_g: food.carbs_g?.toString() || '',
+      fat_g: '',
+    });
+  };
+
   const handleDelete = async (id: number) => {
-    if (!confirm('确定删除这条记录？')) return;
     try {
       await mealsApi.delete(id);
+      showToast('success', '已删除');
       loadMeals();
     } catch (err) {
       console.error('Failed to delete:', err);
+      showToast('error', '删除失败');
     }
+    setDeleteConfirm(null);
   };
 
   // 今日统计
@@ -107,7 +145,7 @@ export default function MealsPage() {
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
+          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
 
@@ -137,15 +175,22 @@ export default function MealsPage() {
       {/* 餐食列表 */}
       <div className="space-y-3">
         {meals.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 shadow-sm text-center text-gray-500">
-            暂无记录，点击下方按钮添加
-          </div>
+          <EmptyState
+            icon={Utensils}
+            iconColor="text-orange-400"
+            title="还没有记录"
+            description="点击下方按钮记录今天吃了什么"
+            action={{
+              label: '添加记录',
+              onClick: () => setShowInput(true),
+            }}
+          />
         ) : (
           meals.map((meal) => {
             const config = mealTypeConfig[meal.meal_type];
             const Icon = config.icon;
             return (
-              <div key={meal.id} className="bg-white rounded-xl p-4 shadow-sm">
+              <div key={meal.id} className="bg-white rounded-xl p-4 shadow-sm animate-fade-in">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 ${config.bg} rounded-full flex items-center justify-center`}>
@@ -157,8 +202,8 @@ export default function MealsPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDelete(meal.id)}
-                    className="p-1 text-gray-400 hover:text-red-500"
+                    onClick={() => setDeleteConfirm(meal.id)}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -177,10 +222,20 @@ export default function MealsPage() {
         )}
       </div>
 
+      {/* 删除确认 */}
+      <ConfirmDialog
+        isOpen={deleteConfirm !== null}
+        title="删除记录"
+        message="确定要删除这条饮食记录吗？"
+        confirmText="删除"
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        onCancel={() => setDeleteConfirm(null)}
+      />
+
       {/* 输入弹窗 */}
       {showInput && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto animate-scale-in">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">添加饮食记录</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* 餐食类型 */}
@@ -193,10 +248,10 @@ export default function MealsPage() {
                       key={type}
                       type="button"
                       onClick={() => setFormData({ ...formData, meal_type: type })}
-                      className={`p-2 rounded-lg flex flex-col items-center gap-1 ${
+                      className={`p-2 rounded-lg flex flex-col items-center gap-1 transition-all ${
                         formData.meal_type === type
                           ? `${config.bg} ring-2 ring-primary-500`
-                          : 'bg-gray-100'
+                          : 'bg-gray-100 hover:bg-gray-200'
                       }`}
                     >
                       <Icon className={`w-5 h-5 ${config.color}`} />
@@ -206,6 +261,23 @@ export default function MealsPage() {
                 })}
               </div>
 
+              {/* 快速选择 */}
+              <div>
+                <label className="block text-sm text-gray-600 mb-2">快速选择</label>
+                <div className="flex flex-wrap gap-2">
+                  {quickFoods.map((food) => (
+                    <button
+                      key={food.name}
+                      type="button"
+                      onClick={() => handleQuickAdd(food)}
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+                    >
+                      {food.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* 描述 */}
               <div>
                 <label className="block text-sm text-gray-600 mb-1">吃了什么</label>
@@ -213,7 +285,7 @@ export default function MealsPage() {
                   type="text"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="例如: 鸡胸肉沙拉"
                   autoFocus
                 />
@@ -227,7 +299,7 @@ export default function MealsPage() {
                     type="number"
                     value={formData.calories}
                     onChange={(e) => setFormData({ ...formData, calories: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="kcal"
                   />
                 </div>
@@ -238,7 +310,7 @@ export default function MealsPage() {
                     step="0.1"
                     value={formData.protein_g}
                     onChange={(e) => setFormData({ ...formData, protein_g: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="g"
                   />
                 </div>
@@ -249,7 +321,7 @@ export default function MealsPage() {
                     step="0.1"
                     value={formData.carbs_g}
                     onChange={(e) => setFormData({ ...formData, carbs_g: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="g"
                   />
                 </div>
@@ -260,7 +332,7 @@ export default function MealsPage() {
                     step="0.1"
                     value={formData.fat_g}
                     onChange={(e) => setFormData({ ...formData, fat_g: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="g"
                   />
                 </div>
@@ -270,15 +342,17 @@ export default function MealsPage() {
                 <button
                   type="button"
                   onClick={() => setShowInput(false)}
-                  className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors"
+                  disabled={saving}
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600"
+                  disabled={saving}
+                  className="flex-1 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:bg-gray-300 transition-colors"
                 >
-                  保存
+                  {saving ? '保存中...' : '保存'}
                 </button>
               </div>
             </form>
@@ -289,7 +363,7 @@ export default function MealsPage() {
       {/* 添加按钮 */}
       <button
         onClick={() => setShowInput(true)}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-orange-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-orange-600 transition-colors"
+        className="fixed bottom-24 right-4 w-14 h-14 bg-orange-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-orange-600 active:scale-95 transition-all"
       >
         <Plus className="w-6 h-6" />
       </button>

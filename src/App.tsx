@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import WeightPage from './pages/WeightPage';
@@ -9,18 +10,20 @@ import ChatPage from './pages/ChatPage';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="weight" element={<WeightPage />} />
-          <Route path="meals" element={<MealsPage />} />
-          <Route path="workout" element={<WorkoutPage />} />
-          <Route path="stats" element={<StatsPage />} />
-          <Route path="chat" element={<ChatPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route path="weight" element={<WeightPage />} />
+            <Route path="meals" element={<MealsPage />} />
+            <Route path="workout" element={<WorkoutPage />} />
+            <Route path="stats" element={<StatsPage />} />
+            <Route path="chat" element={<ChatPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 
