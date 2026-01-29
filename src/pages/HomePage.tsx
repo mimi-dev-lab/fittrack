@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Scale, Utensils, Dumbbell, Flame, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { Scale, Utensils, Dumbbell, Flame, TrendingDown, TrendingUp, Minus, Settings } from 'lucide-react';
 import { statsApi, userApi, exercisesApi, getLocalDateString, type StatsOverview, type User } from '../api/client';
 
 export default function HomePage() {
@@ -72,10 +72,19 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* 日期显示 */}
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-800">FitTrack</h1>
-        <p className="text-gray-500 mt-1">{today}</p>
+      {/* 标题栏 */}
+      <div className="flex items-center justify-between">
+        <div className="w-10" /> {/* 占位 */}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800">FitTrack</h1>
+          <p className="text-gray-500 mt-1">{today}</p>
+        </div>
+        <Link 
+          to="/settings" 
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+        >
+          <Settings className="w-5 h-5 text-gray-500" />
+        </Link>
       </div>
 
       {/* 体重卡片 */}
