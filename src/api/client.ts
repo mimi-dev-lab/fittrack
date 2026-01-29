@@ -1,5 +1,19 @@
 const API_BASE = import.meta.env.DEV ? 'http://localhost:8788/api' : '/api';
 
+// 获取本地时区的今天日期 (YYYY-MM-DD)
+export function getLocalDateString(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// 获取本地时区的 ISO 格式时间（用于 recorded_at）
+export function getLocalISOString(date: Date = new Date()): string {
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString();
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,

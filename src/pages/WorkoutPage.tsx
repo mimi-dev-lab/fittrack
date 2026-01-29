@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Dumbbell, Heart } from 'lucide-react';
-import { exercisesApi, type Exercise } from '../api/client';
+import { exercisesApi, getLocalDateString, getLocalISOString, type Exercise } from '../api/client';
 
 export default function WorkoutPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [showInput, setShowInput] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
 
   // 表单状态
   const [formData, setFormData] = useState({
@@ -50,7 +50,7 @@ export default function WorkoutPage() {
         weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : null,
         distance_km: formData.distance_km ? parseFloat(formData.distance_km) : null,
         avg_heart_rate: null,
-        recorded_at: new Date().toISOString(),
+        recorded_at: getLocalISOString(),
         notes: null,
       });
       setFormData({

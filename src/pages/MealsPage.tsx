@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Coffee, Sun, Moon, Cookie } from 'lucide-react';
-import { mealsApi, type Meal } from '../api/client';
+import { mealsApi, getLocalDateString, getLocalISOString, type Meal } from '../api/client';
 
 const mealTypeConfig = {
   breakfast: { label: '早餐', icon: Coffee, color: 'text-yellow-500', bg: 'bg-yellow-100' },
@@ -13,7 +13,7 @@ export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [showInput, setShowInput] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
 
   // 表单状态
   const [formData, setFormData] = useState({
@@ -52,7 +52,7 @@ export default function MealsPage() {
         protein_g: formData.protein_g ? parseFloat(formData.protein_g) : null,
         carbs_g: formData.carbs_g ? parseFloat(formData.carbs_g) : null,
         fat_g: formData.fat_g ? parseFloat(formData.fat_g) : null,
-        recorded_at: new Date().toISOString(),
+        recorded_at: getLocalISOString(),
         notes: null,
       });
       setFormData({

@@ -167,8 +167,15 @@ app.delete('/exercises/:id', async (c) => {
 });
 
 // ============ 统计 API ============
+// 获取指定时区的今天日期 (YYYY-MM-DD)
+function getTodayInTimezone(tz: string = 'Asia/Tokyo'): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: tz });
+}
+
 app.get('/stats/overview', async (c) => {
-  const today = new Date().toISOString().split('T')[0];
+  // 使用 Asia/Tokyo 时区来确定"今天"
+  const tz = c.req.query('tz') || 'Asia/Tokyo';
+  const today = getTodayInTimezone(tz);
   
   const todayCalories = await c.env.DB.prepare(`
     SELECT COALESCE(SUM(calories), 0) as total
@@ -185,7 +192,8 @@ app.get('/stats/overview', async (c) => {
     ORDER BY recorded_at DESC LIMIT 1
   `).first();
   
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const weekAgoDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const weekAgo = weekAgoDate.toLocaleDateString('sv-SE', { timeZone: tz });
   const weekAgoWeight = await c.env.DB.prepare(`
     SELECT weight_kg FROM weights 
     WHERE recorded_at <= ? ORDER BY recorded_at DESC LIMIT 1

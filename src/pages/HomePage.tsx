@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Scale, Utensils, Dumbbell, Flame } from 'lucide-react';
-import { statsApi, userApi, exercisesApi, type StatsOverview, type User } from '../api/client';
+import { statsApi, userApi, exercisesApi, getLocalDateString, type StatsOverview, type User } from '../api/client';
 
 export default function HomePage() {
   const [stats, setStats] = useState<StatsOverview | null>(null);
@@ -15,7 +15,7 @@ export default function HomePage() {
         const [statsData, userData, exercisesData] = await Promise.all([
           statsApi.overview(),
           userApi.get(),
-          exercisesApi.list(new Date().toISOString().split('T')[0]),
+          exercisesApi.list(getLocalDateString()),
         ]);
         setStats(statsData);
         setUser(userData);

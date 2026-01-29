@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Plus, Trash2 } from 'lucide-react';
-import { weightsApi, userApi, type Weight, type User } from '../api/client';
+import { weightsApi, userApi, getLocalISOString, type Weight, type User } from '../api/client';
 
 export default function WeightPage() {
   const [records, setRecords] = useState<Weight[]>([]);
@@ -43,7 +43,7 @@ export default function WeightPage() {
       await weightsApi.create({
         weight_kg: weight,
         body_fat_pct: null,
-        recorded_at: new Date().toISOString(),
+        recorded_at: getLocalISOString(),
         notes: null,
       });
       setInputWeight('');
